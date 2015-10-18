@@ -1,5 +1,5 @@
 		.ORG	$300
-		JSR	READ_KEYBOARD		
+		
 		BRK
 		
 
@@ -25,6 +25,60 @@ LOOP_READ:	LDA	$E004
 		INX
 		CPX	#2
 		BNE	LOOP_READ
+		JSR	POP_X
+		PLA
+		RTS
+		
+;************************************************
+; CONV: converts the ascii value accumulator in	*
+; a valid hex value.				*
+; Parameters:					*
+;		A: the ascii representation of'	*
+;		the typed digit.		*
+; Return:					*
+;		None.				*
+;************************************************
+		
+CONV:
+		CMP	#$30
+		BCC	CONV_ERR
+		CMP	#$3A			; is the digit between 0 - 9 ascii? 
+		BCC	IS_NUM			; yes, jump to numeric treatment
+		JMP	IS_ALPHA
+IS_NUM:		CLC				;the digit is in numeric interval (0-9)
+		SBC	#$30			; A <- A - 30H
+		CLC
+		ADC	#$1
+		RTS
+IS_ALPHA:	CMP	#$41			; the digit is in alphabetic interval (A-F)			
+		BCC	CONV_ERR
+		CMP	#$47
+		BCC	CONTINUE
+		JMP	CONV_ERR
+CONTINUE:	CLC
+		SBC	#$37			; A <- A - 37H
+		CLC
+		ADC	#$1
+		RTS
+CONV_ERR:	JSR	HANDLER_ERR1		; handles with error exception code 1 - invalid input.
+		RTS
+
+
+;************************************************
+; HANDLER_ERR1: displays an error message	*
+; when the terminal receives an invalid input i	*
+; Invalid inputs i: i < '0', i = 40, i > 'F'	*
+;************************************************
+
+HANDLER_ERR1:
+		PHA
+		JSR	PUSH_X
+		LDX	#$00
+LOOP_ERR1:	LDA	MSG_ERROR1, X
+		STA	$E001
+		INX
+		CMP	#00
+		BNE	LOOP_ERR1
 		JSR	POP_X
 		PLA
 		RTS
@@ -144,6 +198,19 @@ STACK_TOP:	.DB	$00			; STORES THE NEXT AVAILABLE MEMORY ADDRES OF THE STACK.
 		.ORG	$4000
 TMP_X:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER X
 TMP_Y:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER Y
+
+;************************************************
+
 CHAR:		.DB	00
 CHAR1:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE MOST SIGNIFICANT DIGIT
 CHAR2:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE LEAST SIGNIFICANT DIGIT
+
+;************************************************
+
+MSD:		.DB	00			; STORES THE MOST SIGNIFICANT *HEX-DIGIT*
+LSD:		.DB	00			; STORES THE LEAST SIGNIFICANT	*HEX-DIGIT*
+
+;************************************************
+
+MSG_ERROR1:	.DB	"ERROR: Invalid input!"
+END1:		.DB	00
