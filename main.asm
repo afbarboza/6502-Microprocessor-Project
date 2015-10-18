@@ -8,6 +8,8 @@
 ;************************************************
 ; READ_KEYBOARD: reads only two ascii		*
 ; characters from keyboard and stores in memory.*
+; The first char is stored at CHAR1		*
+; The second char is stored at CHAR2		*
 ;************************************************
 
 READ_KEYBOARD:
