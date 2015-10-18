@@ -1,9 +1,31 @@
 		.ORG	$300
-		
+		JSR	READ_KEYBOARD		
 		BRK
 		
 
 ; 0x2000: SUB-ROUTINE AREA
+		.ORG	$2000
+;************************************************
+; READ_KEYBOARD: reads only two ascii		*
+; characters from keyboard and stores in memory.*
+;************************************************
+
+READ_KEYBOARD:
+		PHA
+		JSR	PUSH_X
+		LDA	$00
+		STA	$E000
+LOOP_READ:	LDA	$E004
+		CMP	#00
+		BEQ	LOOP_READ
+		STA	$E002			; exibe echo
+		STA	CHAR, X
+		INX
+		CPX	#2
+		BNE	LOOP_READ
+		JSR	POP_X
+		PLA
+		RTS
 
 ;************************************************	
 ; PUSH_X: stores x register IN the stack.	*
@@ -118,5 +140,8 @@ STACK_TOP:	.DB	$00			; STORES THE NEXT AVAILABLE MEMORY ADDRES OF THE STACK.
 
 ; 4000: TEMPORARY VARIABLE AREA
 		.ORG	$4000
-TMP_X:		.DB	00
-TMP_Y:		.DB	00
+TMP_X:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER X
+TMP_Y:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER Y
+CHAR:		.DB	00
+CHAR1:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE MOST SIGNIFICANT DIGIT
+CHAR2:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE LEAST SIGNIFICANT DIGIT
