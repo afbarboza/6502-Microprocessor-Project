@@ -1,8 +1,8 @@
 		.ORG	$300
-		
+		JSR	READ_KEYBOARD
+		JSR	CONV2
 		BRK
 		
-
 ; 0x2000: SUB-ROUTINE AREA
 		.ORG	$2000
 ;************************************************
@@ -21,14 +21,42 @@ LOOP_READ:	LDA	$E004
 		CMP	#00
 		BEQ	LOOP_READ
 		STA	$E002			; exibe echo
-		STA	CHAR, X
+		STA	CHAR1, X
 		INX
 		CPX	#2
 		BNE	LOOP_READ
 		JSR	POP_X
 		PLA
 		RTS
-		
+
+;************************************************
+; CONV2: Converts the ascii-representationf of	*
+; 2 characters into a single valid hex value.	*
+; The ascii-representations is stored at	*
+; CHAR1 and CHAR2				*
+; 						*
+; Parameters: none.				*
+;						*
+; Return: ACC, storing the hex-value.		*
+;	  0x00 <= A <= 0xFF			*
+;						*
+; Affected registers: Acc			*
+;************************************************
+CONV2:
+		; converts the CHAR1 into MSD
+		LDA	CHAR1
+		JSR	CONV
+		STA	MSD
+		; converts the CHAR2 into LSD
+		LDA	CHAR2
+		JSR	CONV
+		STA	LSD
+		LDA	MSD
+		JSR	MULT_16
+		CLC
+		ADC	LSD
+		RTS
+
 ;************************************************
 ; CONV: converts the ascii value accumulator in	*
 ; a valid hex value.				*
@@ -36,7 +64,7 @@ LOOP_READ:	LDA	$E004
 ;		A: the ascii representation of'	*
 ;		the typed digit.		*
 ; Return:					*
-;		None.				*
+;		A, storing the hex-value	*
 ;************************************************
 		
 CONV:
@@ -63,6 +91,31 @@ CONTINUE:	CLC
 CONV_ERR:	JSR	HANDLER_ERR1		; handles with error exception code 1 - invalid input.
 		RTS
 
+
+;************************************************
+; MULT_16: multiply the acc per 16.		*
+; Parameters: A, storing the value which will	*
+;             be multiplied per 16.		*
+;						*
+; Return:     16*A				*
+;						*
+; Affected registers: A, only.			*
+;************************************************
+
+MULT_16:
+		JSR	PUSH_X
+		STA	TMP_A
+		LDA	#0
+		LDX	#16
+LOOP_MULT:	CPX	#$0
+		BEQ	END_MULT_16
+		BCS	CONTINUE_MULT
+CONTINUE_MULT:	CLC
+		ADC	TMP_A
+		DEX
+		JMP	LOOP_MULT
+END_MULT_16:	JSR	POP_X
+		RTS
 
 ;************************************************
 ; HANDLER_ERR1: displays an error message	*
@@ -92,19 +145,14 @@ PUSH_X:
 		PHP
 		PHA
 		STY	TMP_Y
-		
-		
 		; Y <- index of the next available address on stack
 		LDY	STACK_TOP
-		
 		; A <- X (relative address mode NOT ALLOWED for index register!)
 		TXA
 		STA	$3000, Y
-		
 		; increment by one the next available address on stack
 		INY
 		STY	STACK_TOP
-		
 		LDY	TMP_Y
 		PLA
 		PLP
@@ -119,16 +167,12 @@ POP_X:
 		PHP
 		PHA
 		STY	TMP_Y
-		
 		; Y <- index of the next available address on stack
 		LDY	STACK_TOP
-		
 		DEY
 		LDA	$3000, Y
 		TAX
-		
 		STY	STACK_TOP
-		
 		LDY	TMP_Y
 		PLA
 		PLP
@@ -144,19 +188,14 @@ PUSH_Y:
 		PHP
 		PHA
 		STX	TMP_X
-		
-		
 		; x <- index of the next available address on stack
 		LDX	STACK_TOP
-		
 		; A <- Y (relative address mode NOT ALLOWED for index register!)
 		TYA
 		STA	$3000, X
-		
 		; increment by one the next available address on stack
 		INX
 		STX	STACK_TOP
-		
 		LDX	TMP_X
 		PLA
 		PLP
@@ -171,16 +210,12 @@ POP_Y:
 		PHP
 		PHA
 		STX	TMP_X
-		
 		; x <- index of the next available address on stack
 		LDX	STACK_TOP
-		
 		DEX
 		LDA	$3000, X
 		TAY
-		
 		STX	STACK_TOP
-		
 		LDX	TMP_X
 		PLA
 		PLP
@@ -198,9 +233,10 @@ STACK_TOP:	.DB	$00			; STORES THE NEXT AVAILABLE MEMORY ADDRES OF THE STACK.
 		.ORG	$4000
 TMP_X:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER X
 TMP_Y:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER Y
+TMP_A:		.DB	00
 
 ;************************************************
-
+		.ORG	$4100
 CHAR:		.DB	00
 CHAR1:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE MOST SIGNIFICANT DIGIT
 CHAR2:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE LEAST SIGNIFICANT DIGIT
@@ -209,6 +245,11 @@ CHAR2:		.DB	00			; STORES THE ASCII-CHARARACTER OF THE LEAST SIGNIFICANT DIGIT
 
 MSD:		.DB	00			; STORES THE MOST SIGNIFICANT *HEX-DIGIT*
 LSD:		.DB	00			; STORES THE LEAST SIGNIFICANT	*HEX-DIGIT*
+
+;************************************************
+
+VAL1:		.DB	00			; STORES THE FIRST HEX TYPED VALUE
+VAL2:		.DB	00			; STORES THE SECOND HEX TYPED VALUE
 
 ;************************************************
 
