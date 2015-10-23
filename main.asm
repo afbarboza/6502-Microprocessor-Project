@@ -1,6 +1,12 @@
 		.ORG	$300
-		JSR	READ_KEYBOARD
-		JSR	CONV2
+		;JSR	READ_KEYBOARD
+		;JSR	CONV2
+		;STA	VAL1
+		LDA	#$FF
+		CLC
+		LSR
+		CLC
+		SBC	#128
 		BRK
 		
 ; 0x2000: SUB-ROUTINE AREA
@@ -25,6 +31,43 @@ LOOP_READ:	LDA	$E004
 		INX
 		CPX	#2
 		BNE	LOOP_READ
+		JSR	POP_X
+		PLA
+		RTS
+;************************************************
+; DEC_TO_BIN: converts the value in acc to a	*
+; binary string stored at TMP_STR.		*
+; 						*
+; Parameters: ACC, the value to be "converted"	*
+;						*
+; Return: TMP_STR, storing the binary string.	*
+;************************************************
+DEC_TO_BIN:
+		STA	TMP_A
+		PHA
+		JSR	PUSH_X
+		JSR	PUSH_Y
+		LDX	#7
+		LDY	#0
+LOOP_DECBIN:	CPX	#0
+		BCS	LABEL_DECBIN
+		JMP	END_DECBIN
+LABEL_DECBIN:	JSR	PUSH_Y
+		JSR	X_TO_Y			; y <- x
+		LDA	TMP_A			; the A value SHALL NOT be afected by various shift-left operations
+		JSR	LEFT_SHIFT		; makes A <- A  >> y (shif-left the A y times)
+		JSR	POP_Y
+		AND	#$01			; makes A <- A AND 1
+		CLC
+		ADC	#$30
+		STA	TMP_STR, Y
+		DEX
+		INY
+		CPX	#$FF
+		BEQ	END_DECBIN		; just a feature, if you know what i mean... ;) 
+		JMP	LOOP_DECBIN
+END_DECBIN:	
+		JSR	POP_Y
 		JSR	POP_X
 		PLA
 		RTS
@@ -221,6 +264,41 @@ POP_Y:
 		PLP
 		RTS
 
+;************************************************
+; X_TO_Y: transfer the contents of reg X to Y	*
+;************************************************
+X_TO_Y:
+		PHA
+		TXA
+		TAY
+		PLA
+		RTS
+
+;************************************************
+; X_TO_Y: transfer the contents of reg X to Y	*
+;************************************************
+
+Y_TO_X:
+		PHA
+		TYA
+		TAX
+		PLA
+		RTS
+
+;************************************************
+; LEFT_SHIFT: performs a left shift Y times	*
+; Parameters: Y, storing the number of shifts	*
+;	    A, storing the value to be shifted	*
+; Return:  A, storing the shifted value		*
+;************************************************ 
+LEFT_SHIFT:   	CPY	#0
+		BEQ	END_LEFT_SHIFT
+		LSR
+		DEY
+		JMP	LEFT_SHIFT
+END_LEFT_SHIFT:	RTS
+
+
 ; 3000: PSEUDO-STACK AREA
 		.ORG	$3000		 
 STACK:		.DB	$00			; AS YOU CAN SEE, STACK HAS THE MAXIMUM SIZE OF 256 ELEMENTS. (0x00 - 0xFF)
@@ -233,7 +311,7 @@ STACK_TOP:	.DB	$00			; STORES THE NEXT AVAILABLE MEMORY ADDRES OF THE STACK.
 		.ORG	$4000
 TMP_X:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER X
 TMP_Y:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER Y
-TMP_A:		.DB	00
+TMP_A:		.DB	00			; TEMPORARY VALUE FOR ACC
 
 ;************************************************
 		.ORG	$4100
@@ -247,7 +325,7 @@ MSD:		.DB	00			; STORES THE MOST SIGNIFICANT *HEX-DIGIT*
 LSD:		.DB	00			; STORES THE LEAST SIGNIFICANT	*HEX-DIGIT*
 
 ;************************************************
-
+		
 VAL1:		.DB	00			; STORES THE FIRST HEX TYPED VALUE
 VAL2:		.DB	00			; STORES THE SECOND HEX TYPED VALUE
 
@@ -255,3 +333,18 @@ VAL2:		.DB	00			; STORES THE SECOND HEX TYPED VALUE
 
 MSG_ERROR1:	.DB	"ERROR: Invalid input!"
 END1:		.DB	00
+;************************************************
+		.ORG	$4200
+TMP_ACC:	.DB	00
+BIN1:		.DB	00
+BIN1_END:	.DB	00
+;************************************************
+		.ORG	$4300
+STR_BIN1:	.DB	00			; stores the first ascii representation of a binary value
+		.ORG	$4308
+STR_BIN2:	.DB	00			; stores the second ascii representation of a binary value
+		.ORG	$4316
+TMP_STR:	.DB	00			; stores a temporary ascii representation of a binary value (in REVERSE order)
+		.ORG	$4340
+TMP_STR2:	.DB	00
+END_TMPSTR2:
