@@ -2,27 +2,9 @@
 		;JSR	READ_KEYBOARD
 		;JSR	CONV2
 		;STA	VAL1
-		LDA	#$FF
-		JSR	DEC_ASCII
 		
-		LDA	#100
-		JSR	DEC_ASCII
-		
-		LDA	#35
-		JSR	DEC_ASCII
-		
-		LDA	#128
-		JSR	DEC_ASCII
-		
-		LDA	#3
-		JSR	DEC_ASCII
-		
-		LDA	#10
-		JSR	DEC_ASCII
-		
-		LDA	#0
-		JSR	DEC_ASCII
-	
+		LDA	#$84
+		JSR	DEC_SIGNED
 		BRK
 		
 ; 0x2000: SUB-ROUTINE AREA
@@ -71,7 +53,7 @@ LOOP_DECBIN:	CPX	#0
 LABEL_DECBIN:	JSR	PUSH_Y
 		JSR	X_TO_Y			; y <- x
 		LDA	TMP_A			; the A value SHALL NOT be afected by various shift-left operations
-		JSR	LEFT_SHIFT		; makes A <- A  >> y (shif-left the A y times)
+		JSR	RIGHT_SHIFT		; makes A <- A  >> y (right-left the A y times)
 		JSR	POP_Y
 		AND	#$01			; makes A <- A AND 1
 		CLC
@@ -125,10 +107,66 @@ DIV_10:		STX	TMPD2
 		JMP	DIV_10
 DIV_1:		STY	TMPD1
 		STA	TMPD0
+		; string conversion :)
+		LDA	TMPD2
+		ADC	#$30
+		STA	TMPD2
+		
+		LDA	TMPD1
+		ADC	#$30
+		STA	TMPD1
+		
+		LDA	TMPD0
+		ADC	#$30
+		STA	TMPD0
+		
 		JSR	POP_Y
 		JSR	POP_X
 		PLA
 		RTS
+;************************************************
+
+DEC_SIGNED:	
+		STA	TMP_A
+		PHA
+		JSR	PUSH_X
+		JSR	PUSH_Y
+		LDY	#7
+		JSR	RIGHT_SHIFT	; MAKES ACC <- ACC >> 7 (to verify the most significant bit)
+		CMP	#1		; IS ACC < 0?
+		BEQ	NEG
+POS:		LDX	#'+'
+		STX	SIGN
+		LDA	TMP_A
+		JSR	DEC_ASCII	; PERFORMS A CONVERSION
+		LDA	TMPD2
+		STA	STMPD2
+		LDA	TMPD1
+		STA	STMPD1
+		LDA	TMPD0
+		STA	STMPD0
+		JMP	END_SIGNED
+	
+NEG:		LDX	#'-'
+		STX	SIGN
+		LDA	TMP_A
+		AND	#$7F		; EXTRACT ONLY THE 7-TH LEAST SIGNIFICANT BITS
+		TAX
+		STX	TMP_A
+		LDA	#$80
+		SBC	TMP_A		; ACC <- 128 - 7-TH LEAST SIGNIFICANT BITS
+		JSR	DEC_ASCII
+		LDA	TMPD2
+		STA	STMPD2
+		LDA	TMPD1
+		STA	STMPD1
+		LDA	TMPD0
+		STA	STMPD0
+END_SIGNED:	JSR	POP_Y
+		JSR	POP_X
+		PLA
+		RTS
+
 
 ;************************************************
 ; CONV2: Converts the ascii-representationf of	*
@@ -344,17 +382,17 @@ Y_TO_X:
 		RTS
 
 ;************************************************
-; LEFT_SHIFT: performs a left shift Y times	*
+; RIGHT_SHIFT: performs a right shift Y times	*
 ; Parameters: Y, storing the number of shifts	*
 ;	    A, storing the value to be shifted	*
 ; Return:  A, storing the shifted value		*
 ;************************************************ 
-LEFT_SHIFT:   	CPY	#0
-		BEQ	END_LEFT_SHIFT
+RIGHT_SHIFT:   	CPY	#0
+		BEQ	END_RGHT_SHIFT
 		LSR
 		DEY
-		JMP	LEFT_SHIFT
-END_LEFT_SHIFT:	RTS
+		JMP	RIGHT_SHIFT
+END_RGHT_SHIFT:	RTS
 
 
 ; 3000: PSEUDO-STACK AREA
@@ -410,3 +448,9 @@ TMP_STR2:	.DB	00
 TMPD2:		.DB	00			; stores the most significant digit from last conversion dec-ascii
 TMPD1:		.DB	00			; stores the second most significant digit from last conversion dec-ascii
 TMPD0:		.DB	00			; stores the least significant digit from last conversion dec-ascii
+;************************************************
+		.ORG	$4500
+SIGN:		.DB	00			; STORES THE CHAR '-' IF VALUE < 0, STORES '+', OTHERWISE
+STMPD2:		.DB	00			; SIGNED TMP2
+STMPD1:		.DB	00			; SIGNED TMP1
+STMPD0:		.DB	00			; SIGNED TMP0
