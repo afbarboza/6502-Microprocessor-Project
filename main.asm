@@ -3,10 +3,26 @@
 		;JSR	CONV2
 		;STA	VAL1
 		LDA	#$FF
-		CLC
-		LSR
-		CLC
-		SBC	#128
+		JSR	DEC_ASCII
+		
+		LDA	#100
+		JSR	DEC_ASCII
+		
+		LDA	#35
+		JSR	DEC_ASCII
+		
+		LDA	#128
+		JSR	DEC_ASCII
+		
+		LDA	#3
+		JSR	DEC_ASCII
+		
+		LDA	#10
+		JSR	DEC_ASCII
+		
+		LDA	#0
+		JSR	DEC_ASCII
+	
 		BRK
 		
 ; 0x2000: SUB-ROUTINE AREA
@@ -67,6 +83,48 @@ LABEL_DECBIN:	JSR	PUSH_Y
 		BEQ	END_DECBIN		; just a feature, if you know what i mean... ;) 
 		JMP	LOOP_DECBIN
 END_DECBIN:	
+		JSR	POP_Y
+		JSR	POP_X
+		PLA
+		RTS
+
+;************************************************
+; DEC_ASCII: converts an integer value to a	*
+; ascii representation of this value in decimal	*
+; base.						*
+; Parameters: A, with the value to be converted	*
+;						*
+; Return: A string, where each char represents	*
+; the digit of the value in decimal mode.	*
+;  >TMPD2: stores the most significant digit	*
+;  >TMPD1: stores the middle digit		*
+;  >TMPD0: stores the least significant digit	*
+;						*
+; None register should be affected		*
+;************************************************
+DEC_ASCII:	
+		; saving the registers
+		PHA
+		JSR	PUSH_X
+		JSR	PUSH_Y
+		LDY	#00
+		LDX	#00
+		STX	TMPD2
+		STY	TMPD1
+		STY	TMPD0
+DIV_100:	CMP	#100
+		BCC	DIV_10
+		SBC	#100
+		INX
+		JMP	DIV_100
+DIV_10:		STX	TMPD2
+		CMP	#10
+		BCC	DIV_1
+		SBC	#10
+		INY
+		JMP	DIV_10
+DIV_1:		STY	TMPD1
+		STA	TMPD0
 		JSR	POP_Y
 		JSR	POP_X
 		PLA
@@ -347,4 +405,8 @@ STR_BIN2:	.DB	00			; stores the second ascii representation of a binary value
 TMP_STR:	.DB	00			; stores a temporary ascii representation of a binary value (in REVERSE order)
 		.ORG	$4340
 TMP_STR2:	.DB	00
-END_TMPSTR2:
+;************************************************
+		.ORG	$4400
+TMPD2:		.DB	00			; stores the most significant digit from last conversion dec-ascii
+TMPD1:		.DB	00			; stores the second most significant digit from last conversion dec-ascii
+TMPD0:		.DB	00			; stores the least significant digit from last conversion dec-ascii
