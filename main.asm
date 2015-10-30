@@ -11,6 +11,53 @@ INIT:		;JSR	CLEAN_MEMORY		; TODO: limpar memoria
 		JSR	NEW_LINE		; PRINTS A NEW LINE IN SCREEN
 		JSR	PRINT_CURSOR
 		STA	$E003			; PRINT THE HEX VALUE
+		
+		JSR	NEW_LINE
+		JSR	DEC_ASCII		; CONVERTS TO A UNSIGNED INTEGER OF 1 BYTE
+		JSR	PRINT_CURSOR			
+		JSR	PRINT_DEC		; PRINTS THE ASCII REPRESENTATION OF THE UNSIGNED VALUE
+		
+		JSR	NEW_LINE
+		JSR	DEC_SIGNED
+		JSR	PRINT_CURSOR
+		JSR	PRINT_SIGNED
+		
+		
+		JSR	NEW_LINE
+		JSR	DEC_TO_BIN
+		JSR	PRINT_CURSOR
+		JSR	PRINT_BIN
+		
+		STA	VAL1
+		JSR	NEW_LINE		
+		
+		
+		JSR	PRINT_MSG1		; ASKS FOR AN HEXADECIMAL STRING INPUT
+		JSR	READ_KEYBOARD		; READS A HEX_DEC VALUE
+		JSR	CONV2			; CONVERTS THE VALUE READ
+		JSR	NEW_LINE		; PRINTS A NEW LINE IN SCREEN
+		JSR	PRINT_CURSOR
+		STA	$E003			; PRINT THE HEX VALUE
+		
+		JSR	NEW_LINE
+		JSR	DEC_ASCII		; CONVERTS TO A UNSIGNED INTEGER OF 1 BYTE
+		JSR	PRINT_CURSOR			
+		JSR	PRINT_DEC		; PRINTS THE ASCII REPRESENTATION OF THE UNSIGNED VALUE
+		
+		JSR	NEW_LINE
+		JSR	DEC_SIGNED
+		JSR	PRINT_CURSOR
+		JSR	PRINT_SIGNED
+		
+		
+		JSR	NEW_LINE
+		JSR	DEC_TO_BIN
+		JSR	PRINT_CURSOR
+		JSR	PRINT_BIN
+		
+		STA	VAL2
+		
+		
 		BRK
 		
 ; 0x2000: SUB-ROUTINE AREA
@@ -55,6 +102,9 @@ LOOP_MSG1:	LDA	USR_MSG1, X
 		PLA
 		RTS		
 
+;************************************************
+; PRINT_CURSOR: prints ">>>"  in the screen	*
+;************************************************
 PRINT_CURSOR:
 		PHA
 		JSR	PUSH_X
@@ -102,6 +152,19 @@ LABEL_DECBIN:	JSR	PUSH_Y
 		JMP	LOOP_DECBIN
 END_DECBIN:	
 		JSR	POP_Y
+		JSR	POP_X
+		PLA
+		RTS
+
+PRINT_BIN:
+		PHA
+		JSR	PUSH_X
+		LDX	#0
+BIN_OUT:	LDA	TMP_STR, X
+		STA	$E002
+		INX
+		CPX	#8
+		BNE	BIN_OUT	
 		JSR	POP_X
 		PLA
 		RTS
@@ -160,8 +223,36 @@ DIV_1:		STY	TMPD1
 		JSR	POP_X
 		PLA
 		RTS
-;************************************************
 
+;************************************************
+; PRINT_DEC:    prints the ASCII representation	*
+; of the last conversion of integer		*
+;************************************************
+PRINT_DEC:
+		PHA
+		LDA	TMPD2
+		STA	$E001
+		LDA	TMPD1
+		STA	$E001
+		LDA	TMPD0
+		STA	$E001
+		PLA
+		RTS
+
+
+;************************************************
+; DEC_SIGNED: converts the binary value in acc	*
+; to a signed decimal string.			*
+;						*
+; Parameters: ACC, storing the value to be 	*
+;	      converted.			*
+;						*
+; Return: the string - 				*
+;	  SIGN: stores the signal ('+'/'-')	*
+;	  STMPD2: the MSDigit			*
+;	  STMPD1: the middle digit		*
+;	  STMPD0: the LSDigit			*
+;************************************************
 DEC_SIGNED:	
 		STA	TMP_A
 		PHA
@@ -182,7 +273,6 @@ POS:		LDX	#'+'
 		LDA	TMPD0
 		STA	STMPD0
 		JMP	END_SIGNED
-	
 NEG:		LDX	#'-'
 		STX	SIGN
 		LDA	TMP_A
@@ -203,6 +293,19 @@ END_SIGNED:	JSR	POP_Y
 		PLA
 		RTS
 
+
+PRINT_SIGNED:
+		PHA
+		LDA	SIGN
+		STA	$E001
+		LDA	STMPD2
+		STA	$E001
+		LDA	STMPD1
+		STA	$E001
+		LDA	STMPD0
+		STA	$E001
+		PLA		
+		RTS
 
 ;************************************************
 ; CONV2: Converts the ascii-representationf of	*
