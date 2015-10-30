@@ -368,7 +368,8 @@ CONTINUE:	CLC
 		RTS
 CONV_ERR:	JSR	HANDLER_ERR1		; handles with error exception code 1 - invalid input.
 		LDA	#00
-		STA	$E00
+		STA	$E000
+		JMP	INIT
 		RTS
 
 
@@ -421,6 +422,7 @@ NEW_LINE:
 HANDLER_ERR1:
 		PHA
 		JSR	PUSH_X
+		JSR	PUSH_Y
 		LDX	#$00
 		JSR	NEW_LINE
 LOOP_ERR1:	LDA	MSG_ERROR1, X
@@ -428,7 +430,12 @@ LOOP_ERR1:	LDA	MSG_ERROR1, X
 		INX
 		CMP	#00
 		BNE	LOOP_ERR1
-		JSR	DELAY
+		LDY	#25
+CALL_DELAY:	JSR	DELAY
+		CPY	#1
+		DEY
+		BNE	CALL_DELAY
+		JSR	POP_Y
 		JSR	POP_X
 		PLA
 		RTS
@@ -439,17 +446,16 @@ LOOP_ERR1:	LDA	MSG_ERROR1, X
 ; screen					*
 ;************************************************
 DELAY:
-		PHA
-		JSR	PUSH_X
 		JSR	PUSH_Y
+		JSR	PUSH_X
+		LDY	#$FF
 DELAY1:		LDX	#$FF
 DLY1:		DEX
 		BNE	DLY1
 		DEY
-		BNE	DELAY1				
-		JSR	POP_Y
+		BNE	DELAY1
 		JSR	POP_X
-		PLA
+		JSR	POP_Y
 		RTS
 
 ;************************************************	
