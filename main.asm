@@ -2,9 +2,15 @@
 		;JSR	READ_KEYBOARD
 		;JSR	CONV2
 		;STA	VAL1
-		
-		LDA	#$84
-		JSR	DEC_SIGNED
+		;LDA	#$80
+		;JSR	DEC_SIGNED
+INIT:		;JSR	CLEAN_MEMORY		; TODO: limpar memoria
+		JSR	PRINT_MSG1		; ASKS FOR AN HEXADECIMAL STRING INPUT
+		JSR	READ_KEYBOARD		; READS A HEX_DEC VALUE
+		JSR	CONV2			; CONVERTS THE VALUE READ
+		JSR	NEW_LINE		; PRINTS A NEW LINE IN SCREEN
+		JSR	PRINT_CURSOR
+		STA	$E003			; PRINT THE HEX VALUE
 		BRK
 		
 ; 0x2000: SUB-ROUTINE AREA
@@ -20,7 +26,7 @@ READ_KEYBOARD:
 		PHA
 		JSR	PUSH_X
 		LDA	$00
-		STA	$E000
+		;STA	$E000
 LOOP_READ:	LDA	$E004
 		CMP	#00
 		BEQ	LOOP_READ
@@ -32,6 +38,36 @@ LOOP_READ:	LDA	$E004
 		JSR	POP_X
 		PLA
 		RTS
+;************************************************
+; PRINT_MSG1: prints the message - 		*
+;       "Insira um valor" in the screen		*
+;************************************************
+PRINT_MSG1:
+		PHA
+		JSR	PUSH_X
+		LDX	#$00
+LOOP_MSG1:	LDA	USR_MSG1, X
+		STA	$E002
+		INX
+		CPX	USR_MSG1_SZ
+		BNE	LOOP_MSG1
+		JSR	POP_X
+		PLA
+		RTS		
+
+PRINT_CURSOR:
+		PHA
+		JSR	PUSH_X
+		LDX	#$00
+LOOP_CURSOR:	LDA	CURSOR_OUT, X
+		STA	$E002
+		INX
+		CPX	CURSOR_SIZE
+		BNE	LOOP_CURSOR
+		JSR	POP_X
+		PLA
+		RTS	
+
 ;************************************************
 ; DEC_TO_BIN: converts the value in acc to a	*
 ; binary string stored at TMP_STR.		*
@@ -228,6 +264,8 @@ CONTINUE:	CLC
 		ADC	#$1
 		RTS
 CONV_ERR:	JSR	HANDLER_ERR1		; handles with error exception code 1 - invalid input.
+		LDA	#00
+		STA	$E00
 		RTS
 
 
@@ -256,21 +294,57 @@ CONTINUE_MULT:	CLC
 END_MULT_16:	JSR	POP_X
 		RTS
 
+
+;************************************************
+; NEW_LINE: prints a '\n' in the screen		*
+; No register should be affected		*
+;************************************************
+NEW_LINE:
+		PHA
+		LDA	#$0A
+		STA	$E001
+		LDA	#$00D
+		STA	$E001
+		PLA
+		RTS
+
 ;************************************************
 ; HANDLER_ERR1: displays an error message	*
 ; when the terminal receives an invalid input i	*
 ; Invalid inputs i: i < '0', i = 40, i > 'F'	*
 ;************************************************
 
+
 HANDLER_ERR1:
 		PHA
 		JSR	PUSH_X
 		LDX	#$00
+		JSR	NEW_LINE
 LOOP_ERR1:	LDA	MSG_ERROR1, X
 		STA	$E001
 		INX
 		CMP	#00
 		BNE	LOOP_ERR1
+		JSR	DELAY
+		JSR	POP_X
+		PLA
+		RTS
+
+;************************************************
+; DELAY: generates a delay in the program to	*
+; show the error message and then clean the	*
+; screen					*
+;************************************************
+DELAY:
+		PHA
+		JSR	PUSH_X
+		JSR	PUSH_Y
+DELAY1:		LDX	#$FF
+DLY1:		DEX
+		BNE	DLY1
+		DEY
+		BNE	DELAY1				
+		JSR	POP_Y
 		JSR	POP_X
 		PLA
 		RTS
@@ -454,3 +528,10 @@ SIGN:		.DB	00			; STORES THE CHAR '-' IF VALUE < 0, STORES '+', OTHERWISE
 STMPD2:		.DB	00			; SIGNED TMP2
 STMPD1:		.DB	00			; SIGNED TMP1
 STMPD0:		.DB	00			; SIGNED TMP0
+;************************************************
+		.ORG	$4700
+MSG_SIZE:	.DB	00			; DEFINES THE MESSAGE SIZE TO BE PRINTED
+USR_MSG1:	.DB	"Insira um valor:"	; USER MESSAGE 1: Enter with a value
+USR_MSG1_SZ:	.DB	16			; SIZE OF MESAGE 1
+CURSOR_OUT:	.DB	"   >>> "
+CURSOR_SIZE:	.DB	7
