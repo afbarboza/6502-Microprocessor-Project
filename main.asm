@@ -1,66 +1,68 @@
 		.ORG	$300
-		;JSR	READ_KEYBOARD
-		;JSR	CONV2
-		;STA	VAL1
-		;LDA	#$80
-		;JSR	DEC_SIGNED
-INIT:		;JSR	CLEAN_MEMORY		; TODO: limpar memoria
+INIT:		
+		; SEQUENCE OF INPUT AND OUTPUTS FOR THE FISRT VALUE
 		JSR	PRINT_MSG1		; ASKS FOR AN HEXADECIMAL STRING INPUT
 		JSR	READ_KEYBOARD		; READS A HEX_DEC VALUE
 		JSR	CONV2			; CONVERTS THE VALUE READ
 		JSR	NEW_LINE		; PRINTS A NEW LINE IN SCREEN
 		JSR	PRINT_CURSOR
 		STA	$E003			; PRINT THE HEX VALUE
-		
 		JSR	NEW_LINE
 		JSR	DEC_ASCII		; CONVERTS TO A UNSIGNED INTEGER OF 1 BYTE
 		JSR	PRINT_CURSOR			
 		JSR	PRINT_DEC		; PRINTS THE ASCII REPRESENTATION OF THE UNSIGNED VALUE
-		
 		JSR	NEW_LINE
 		JSR	DEC_SIGNED
+		PHA
+		LDA	TMPSVAL
+		STA	SVAL1
+		LDA	SIGN
+		STA	SIGNAL1
+		PLA
 		JSR	PRINT_CURSOR
 		JSR	PRINT_SIGNED
-		
-		
 		JSR	NEW_LINE
 		JSR	DEC_TO_BIN
 		JSR	PRINT_CURSOR
 		JSR	PRINT_BIN
-		
 		STA	VAL1
 		JSR	NEW_LINE		
-		
-		
+		; SEQUENCE OF INPUT AND OUTPUTS FOR THE SECOND VALUE
 		JSR	PRINT_MSG1		; ASKS FOR AN HEXADECIMAL STRING INPUT
 		JSR	READ_KEYBOARD		; READS A HEX_DEC VALUE
 		JSR	CONV2			; CONVERTS THE VALUE READ
 		JSR	NEW_LINE		; PRINTS A NEW LINE IN SCREEN
 		JSR	PRINT_CURSOR
 		STA	$E003			; PRINT THE HEX VALUE
-		
 		JSR	NEW_LINE
 		JSR	DEC_ASCII		; CONVERTS TO A UNSIGNED INTEGER OF 1 BYTE
 		JSR	PRINT_CURSOR			
 		JSR	PRINT_DEC		; PRINTS THE ASCII REPRESENTATION OF THE UNSIGNED VALUE
-		
 		JSR	NEW_LINE
 		JSR	DEC_SIGNED
+		PHA
+		LDA	TMPSVAL
+		STA	SVAL2
+		LDA	SIGN
+		STA	SIGNAL2
+		PLA
 		JSR	PRINT_CURSOR
 		JSR	PRINT_SIGNED
-		
-		
 		JSR	NEW_LINE
 		JSR	DEC_TO_BIN
 		JSR	PRINT_CURSOR
 		JSR	PRINT_BIN
-		
 		STA	VAL2
-		
-		
+		; THE FINAL OUTPUT
+		JSR	NEW_LINE
+		JSR	SUM_16BITS
+		JSR	UNSIGNED_PRINT
 		BRK
-		
-; 0x2000: SUB-ROUTINE AREA
+
+;================================================
+; 0x2000: SUB-ROUTINE AREA		 	=
+;================================================
+
 		.ORG	$2000
 ;************************************************
 ; READ_KEYBOARD: reads only two ascii		*
@@ -150,12 +152,14 @@ LABEL_DECBIN:	JSR	PUSH_Y
 		CPX	#$FF
 		BEQ	END_DECBIN		; just a feature, if you know what i mean... ;) 
 		JMP	LOOP_DECBIN
-END_DECBIN:	
-		JSR	POP_Y
+END_DECBIN:	JSR	POP_Y
 		JSR	POP_X
 		PLA
 		RTS
-
+;************************************************
+; PRINT_BIN: prints the ascii representation of *
+; the last integer value input			*
+;************************************************
 PRINT_BIN:
 		PHA
 		JSR	PUSH_X
@@ -210,15 +214,12 @@ DIV_1:		STY	TMPD1
 		LDA	TMPD2
 		ADC	#$30
 		STA	TMPD2
-		
 		LDA	TMPD1
 		ADC	#$30
 		STA	TMPD1
-		
 		LDA	TMPD0
 		ADC	#$30
-		STA	TMPD0
-		
+		STA	TMPD0		
 		JSR	POP_Y
 		JSR	POP_X
 		PLA
@@ -266,6 +267,7 @@ POS:		LDX	#'+'
 		STX	SIGN
 		LDA	TMP_A
 		JSR	DEC_ASCII	; PERFORMS A CONVERSION
+		STA	TMPSVAL
 		LDA	TMPD2
 		STA	STMPD2
 		LDA	TMPD1
@@ -281,6 +283,7 @@ NEG:		LDX	#'-'
 		STX	TMP_A
 		LDA	#$80
 		SBC	TMP_A		; ACC <- 128 - 7-TH LEAST SIGNIFICANT BITS
+		STA	TMPSVAL
 		JSR	DEC_ASCII
 		LDA	TMPD2
 		STA	STMPD2
@@ -294,6 +297,10 @@ END_SIGNED:	JSR	POP_Y
 		RTS
 
 
+;************************************************
+; PRINT_SIGNED: prints the ASCII string of	*
+; an integer signed byte			*
+;************************************************
 PRINT_SIGNED:
 		PHA
 		LDA	SIGN
@@ -411,13 +418,57 @@ NEW_LINE:
 		STA	$E001
 		PLA
 		RTS
+;************************************************
+; SUM_16BITS: sum the 2 unsigned values and	*
+; then stores the unsigned result and print on	*
+; screen					*
+;************************************************ 
+SUM_16BITS:
+		LDA	VAL1
+		CLC
+		ADC	VAL2
+		STA	SUM_LOW
+		BCS	HIGH_SUM
+		JMP	END_16BITS	
+HIGH_SUM:	LDX	#$01
+		STX	SUM_HIGH
+END_16BITS:	RTS
 
+
+;************************************************
+; UNSIGNED_PRINT: prints the value in hex	*
+; and decimal representation, ignoritng the	*
+; the bit signal (msb)				*
+;************************************************
+UNSIGNED_PRINT:
+		STA	TMP_A
+		LDA	#'S'
+		STA	$E001
+		LDA	#'O'
+		STA	$E001
+		LDA	#'M'
+		STA	$E001
+		LDA	#'A'
+		STA	$E001
+		LDA	#':'
+		STA	$E001
+		LDA	#' '
+		LDA	TMP_A
+		PHA
+		JSR	PUSH_Y
+		LDA	SUM_HIGH
+		STA	$E003
+		LDA	SUM_LOW
+		STA	$E003
+		JSR	POP_Y
+		PLA
+		RTS
+		
 ;************************************************
 ; HANDLER_ERR1: displays an error message	*
 ; when the terminal receives an invalid input i	*
 ; Invalid inputs i: i < '0', i = 40, i > 'F'	*
 ;************************************************
-
 
 HANDLER_ERR1:
 		PHA
@@ -578,7 +629,10 @@ RIGHT_SHIFT:   	CPY	#0
 END_RGHT_SHIFT:	RTS
 
 
-; 3000: PSEUDO-STACK AREA
+;================================================
+; 3000: PSEUDO-STACK AREA.			=
+; Yeah... I implemented my own stack		=
+;================================================
 		.ORG	$3000		 
 STACK:		.DB	$00			; AS YOU CAN SEE, STACK HAS THE MAXIMUM SIZE OF 256 ELEMENTS. (0x00 - 0xFF)
 
@@ -586,7 +640,11 @@ STACK:		.DB	$00			; AS YOU CAN SEE, STACK HAS THE MAXIMUM SIZE OF 256 ELEMENTS. 
 STACK_TOP:	.DB	$00			; STORES THE NEXT AVAILABLE MEMORY ADDRES OF THE STACK.
 
 
-; 4000: TEMPORARY VARIABLE AREA
+;================================================
+; 4000: TEMPORARY VARIABLE AREA			=
+; Every memory variable is here... :)		=
+;================================================
+
 		.ORG	$4000
 TMP_X:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER X
 TMP_Y:		.DB	00			; TEMPORARY VALUE FOR INDEX REGISTER Y
@@ -607,6 +665,13 @@ LSD:		.DB	00			; STORES THE LEAST SIGNIFICANT	*HEX-DIGIT*
 		
 VAL1:		.DB	00			; STORES THE FIRST HEX TYPED VALUE
 VAL2:		.DB	00			; STORES THE SECOND HEX TYPED VALUE
+
+TMPSVAL:	.DB	00
+SIGNAL1:	.DB	00
+SVAL1:		.DB	00
+
+SIGNAL2:	.DB	00
+SVAL2:		.DB	00
 
 ;************************************************
 
@@ -644,3 +709,13 @@ USR_MSG1:	.DB	"Insira um valor:"	; USER MESSAGE 1: Enter with a value
 USR_MSG1_SZ:	.DB	16			; SIZE OF MESAGE 1
 CURSOR_OUT:	.DB	"   >>> "
 CURSOR_SIZE:	.DB	7
+;************************************************
+		.ORG	$4900
+SUM_HIGH:	.DB	00
+SUM_LOW:	.DB	00
+HEX_DIGIT2:	.DB	00
+HEX_DIGIT1:	.DB	00
+HEX_DIGIT0:	.DB	00
+
+		.ORG	$5000
+SIGNED_SUM:	.DB	00
